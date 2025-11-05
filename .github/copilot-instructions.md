@@ -51,8 +51,78 @@ Use these project-specific notes to be productive immediately. Keep changes smal
 - Utilities: `src/lib/utils.ts`, `src/utils/toast.ts`.
 
 ## Common tasks (examples)
-- Add a route: create `src/pages/About.tsx`, then in `src/App.tsx` add `<Route path="/about" element={<About />} />` above the `"*"` route.
-- Fetch data: inside a page/component, use `useQuery({ queryKey: ["users"], queryFn: fetchUsers })` and render loading/error states.
-- Show a toast: `import { showSuccess } from "@/utils/toast"; showSuccess("Saved!")`.
 
-If a pattern isn’t present in this repo (e.g., testing), don’t invent it—ask first. Keep imports using `@/` alias, route additions centralized in `src/App.tsx`, and UI built from `src/components/ui/*`.
+### Add a new page with navigation
+1. Create `src/pages/About.tsx`:
+```tsx
+const About = () => <div>About page</div>;
+export default About;
+```
+2. In `src/App.tsx`, add `<Route path="/about" element={<About />} />` above the `"*"` route.
+3. Link to it: `<Link to="/about">About</Link>` (import from `react-router-dom`).
+
+### Fetch data with React Query
+Inside a page/component:
+```tsx
+const { data, isLoading, error } = useQuery({
+  queryKey: ["users"],
+  queryFn: async () => {
+    const res = await fetch("/api/users");
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  }
+});
+if (isLoading) return <div>Loading...</div>;
+if (error) return <div>Error: {error.message}</div>;
+return <div>{data.map(user => <p key={user.id}>{user.name}</p>)}</div>;
+```
+
+### Build a form with react-hook-form + Zod
+```tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const formSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+});
+
+const MyForm = () => {
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: { email: "", name: "" }
+  });
+  
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    console.log(values);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField control={form.control} name="name" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Name</FormLabel>
+            <FormControl><Input {...field} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <Button type="submit">Submit</Button>
+      </form>
+    </Form>
+  );
+};
+```
+
+### Show a toast
+```tsx
+import { showSuccess, showError } from "@/utils/toast";
+showSuccess("Saved!");
+showError("Something went wrong");
+```
+
+If a pattern isn't present in this repo (e.g., testing), don't invent it—ask first. Keep imports using `@/` alias, route additions centralized in `src/App.tsx`, and UI built from `src/components/ui/*`.
