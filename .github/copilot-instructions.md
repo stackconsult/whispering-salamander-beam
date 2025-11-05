@@ -9,6 +9,29 @@ Use these project-specific notes to be productive immediately. Keep changes smal
 - UI kit: shadcn/ui components under `src/components/ui/*` (Radix primitives). Utility `cn()` in `src/lib/utils.ts`.
 - Path alias: `@` resolves to `src/` (see `vite.config.ts`). Prefer absolute imports from `@/...`.
 - SPA hosting: `vercel.json` rewrites all paths to `/index.html`.
+- **Backend**: Vercel serverless functions in `api/` folder. Main endpoint: `api/validate.ts` for URL content validation with LLM.
+
+## Backend API (Serverless Functions)
+- **LLM Provider**: Interchangeable OpenAI or Hugging Face (set via `.env.local` → `LLM_PROVIDER=openai|huggingface`)
+- **Environment variables** (`.env.local`):
+  - `LLM_PROVIDER`: Choose `openai` or `huggingface`
+  - `OPENAI_API_KEY` + `OPENAI_MODEL`: For OpenAI (default: `gpt-4o-mini`)
+  - `HUGGINGFACE_API_KEY` + `HUGGINGFACE_MODEL`: For Hugging Face (default: `mistralai/Mistral-7B-Instruct-v0.2`)
+- **Rate limiting**: 10 requests/minute per IP (in-memory, see `api/utils/rateLimit.ts`)
+- **Validation flow**: 
+  1. Fetch URL content (10s timeout, HTML text extraction)
+  2. Send content + query to LLM (OpenAI or HuggingFace)
+  3. LLM returns JSON: `{ matches: boolean, reasoning: string }`
+  4. API responds with validation result
+
+### Run locally with serverless functions
+- Use Vercel’s dev server so `/api/*` endpoints work alongside Vite.
+  - Install the Vercel CLI once globally (or use the devDependency): `pnpm dlx vercel@latest` (global) or run the script below.
+  - Start: `pnpm dev:vercel`
+- Endpoints:
+  - Health: `GET /api/health` → shows current provider and whether keys are configured
+  - Validate: `POST /api/validate` with `{ url, query, provider? }`
+- Default provider is `huggingface` (see `.env.local`). The UI dropdown in `SourceValidator` lets you override per request.
 
 ## Dev workflows
 - Package manager: pnpm (lockfile present). Common scripts in `package.json`:

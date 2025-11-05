@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SourceValidator = () => {
   const [url, setUrl] = useState<string>("");
@@ -15,6 +16,7 @@ const SourceValidator = () => {
   const [validationResult, setValidationResult] = useState<string | null>(null);
   const [isValidLink, setIsValidLink] = useState<boolean | null>(null);
   const [contentMatchesQuery, setContentMatchesQuery] = useState<boolean | null>(null);
+  const [provider, setProvider] = useState<"openai" | "huggingface">("huggingface");
 
   const handleValidate = async () => {
     if (!url.trim() || !query.trim()) {
@@ -26,79 +28,37 @@ const SourceValidator = () => {
     setValidationResult(null);
     setIsValidLink(null);
     setContentMatchesQuery(null);
-    const loadingToastId = showLoading("Validating source...");
+  const loadingToastId = String(showLoading("Validating source..."));
 
     try {
-      // Simulate API call to a backend service
-      // In a real application, this would be a fetch/axios call to your backend
-      const response = await new Promise<{
-        success: boolean;
-        message: string;
-        isValidLink: boolean;
-        contentMatchesQuery: boolean;
-        error?: string;
-      }>((resolve) => {
-        setTimeout(() => {
-          // Basic URL validation (can be more robust on backend)
-          const urlRegex = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i;
-          const isUrlValid = urlRegex.test(url);
-
-          if (!isUrlValid) {
-            resolve({
-              success: false,
-              message: "Invalid URL format.",
-              isValidLink: false,
-              contentMatchesQuery: false,
-              error: "Invalid URL format.",
-            });
-            return;
-          }
-
-          // Simulate different outcomes for demonstration
-          const randomOutcome = Math.random();
-          if (randomOutcome < 0.2) { // Simulate network error or invalid link
-            resolve({
-              success: false,
-              message: "Could not reach the URL or invalid link.",
-              isValidLink: false,
-              contentMatchesQuery: false,
-              error: "Network error or invalid link.",
-            });
-          } else if (randomOutcome < 0.6) { // Simulate valid link but content mismatch
-            resolve({
-              success: true,
-              message: "Link is valid, but content does not match query.",
-              isValidLink: true,
-              contentMatchesQuery: false,
-            });
-          } else { // Simulate valid link and content match
-            resolve({
-              success: true,
-              message: "Link is valid and content matches query!",
-              isValidLink: true,
-              contentMatchesQuery: true,
-            });
-          }
-        }, 2000); // Simulate network delay
+      // Call the real API endpoint
+      const response = await fetch("/api/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url, query, provider }),
       });
 
-      dismissToast(loadingToastId);
+      const data = await response.json();
 
-      if (response.success) {
+  dismissToast(loadingToastId);
+
+      if (data.success) {
         setValidationStatus("success");
-        setValidationResult(response.message);
-        setIsValidLink(response.isValidLink);
-        setContentMatchesQuery(response.contentMatchesQuery);
-        showSuccess(response.message);
+        setValidationResult(data.message);
+        setIsValidLink(data.isValidLink);
+        setContentMatchesQuery(data.contentMatchesQuery);
+        showSuccess(data.message);
       } else {
         setValidationStatus("error");
-        setValidationResult(response.message);
-        setIsValidLink(response.isValidLink);
-        setContentMatchesQuery(response.contentMatchesQuery);
-        showError(response.message);
+        setValidationResult(data.message);
+        setIsValidLink(data.isValidLink);
+        setContentMatchesQuery(data.contentMatchesQuery);
+        showError(data.message);
       }
     } catch (error) {
-      dismissToast(loadingToastId);
+  dismissToast(loadingToastId);
       setValidationStatus("error");
       setValidationResult("An unexpected error occurred during validation.");
       setIsValidLink(false);
@@ -117,6 +77,18 @@ const SourceValidator = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="provider">LLM Provider</Label>
+          <Select value={provider} onValueChange={(value: "openai" | "huggingface") => setProvider(value)}>
+            <SelectTrigger id="provider">
+              <SelectValue placeholder="Select provider" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">OpenAI (GPT)</SelectItem>
+              <SelectItem value="huggingface">Hugging Face (Mistral)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="url">Source URL</Label>
           <Input
