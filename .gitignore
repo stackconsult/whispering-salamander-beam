@@ -26,3 +26,4 @@ dist-ssr
 
 # Secrets and deployment scripts
 add-env-vars.sh
+package-lock.json
